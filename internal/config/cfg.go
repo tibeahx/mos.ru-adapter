@@ -5,10 +5,11 @@ import (
 	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	ApiKey          string `yaml:"apiKey"`
+	ApiKey          string
 	RedisUsername   string `yaml:"redisUsername"`
 	RedisPassword   string `yaml:"redisPassword"`
 	RedisClientAddr string `yaml:"redisClientAddr"`
@@ -26,9 +27,15 @@ func GetConfig() *Config {
 		log.Fatalf("cfg for path:%s not exists", cfgPath)
 	}
 
-	cfg := &Config{}
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
 
-	if err := cleanenv.ReadConfig(cfgPath, cfg); err != nil {
+	cfg := &Config{
+		ApiKey: os.Getenv("APIKEY"),
+	}
+
+	if err := cleanenv.ReadConfig(cfgPath, &cfg); err != nil {
 		log.Fatal(err)
 	}
 

@@ -40,17 +40,10 @@ type MosService struct {
 }
 
 func NewMosService(cfg *config.Config, rc *storage.RedisClient, logger *zap.SugaredLogger) *MosService {
-	var apiKey string
-	if cfg.ApiKey == "" {
-		apiKey = defaultApiKey
-	} else {
-		apiKey = cfg.ApiKey
-	}
-
 	rows := make([]byte, 0)
 
 	return &MosService{
-		apiKey:  apiKey,
+		apiKey:  cfg.ApiKey,
 		rc:      rc,
 		rows:    rows,
 		client:  client,
@@ -59,21 +52,13 @@ func NewMosService(cfg *config.Config, rc *storage.RedisClient, logger *zap.Suga
 	}
 }
 
-// надо разнести, чтобы гетАлПаркингс срабатывал только при старте системы
-// далее после старта выполняется этот запрос и весь датасет сохраняется в сторадже
-// последующие запросы клиента идут в наш внутренний сторадж, так как на нашем сторадже будет быстрее отдавать
-// будет проще сделать логику сортировки по полям из задания, методы получения которых не предусмотрены
-// в изначальном апи
-
-// the function is runned once the app starts, no more calls in future available
-
 var defaultHeaders = map[string]string{
 	"Accept":       "*/*",
 	"Connection":   "keep-alive",
 	"Content-type": "application/json",
 }
 
-func (s *MosService) getAllParkingsFromUpstream() error {
+func (s *MosService) GetAllParkingsFromUpstream() error {
 	ctx, cancel := context.WithTimeout(context.Background(), maxConnectionTimeout)
 	defer cancel()
 
@@ -86,28 +71,24 @@ func (s *MosService) getAllParkingsFromUpstream() error {
 	q.Add("api_key", s.apiKey)
 	req.URL.RawQuery = q.Encode()
 
-	for key, value := range defaultHeaders {
-		if len(key) > 1 {
-			req.Header.Add(key, value)
-		}
-	}
+	s.applyHeaders(defaultHeaders, req)
 
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
-		return fmt.Errorf("status != 200 %d", resp.StatusCode)
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("status != 200 \ncurrent status: %d", resp.StatusCode)
 	}
 	defer resp.Body.Close()
 
-	var rows []types.Row
-	if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
+	var parkings []types.Parking
+	if err := json.NewDecoder(resp.Body).Decode(&parkings); err != nil {
 		return err
 	}
 
-	json, err := json.Marshal(rows)
+	json, err := json.Marshal(parkings)
 	if err != nil {
 		return err
 	}
@@ -120,11 +101,7 @@ func (s *MosService) getAllParkingsFromUpstream() error {
 }
 
 // редис возвращает строку, необходимо ее кастануть к типу
-func (s *MosService) GetRowsFromStorage(ctx context.Context) ([]types.Row, error) {
-	s.getAllParkingsFromUpstream()
-	s.saveRowsToCache(ctx)
-	s.logger.Infof("total saved rows %d", len(s.rows))
-
+func (s *MosService) GetParkingsFromStorage(ctx context.Context) ([]types.Parking, error) {
 	res, err := s.rc.Redis.Get(ctx, allRows).Result()
 	if err != nil {
 		return nil, fmt.Errorf("mosservice.GetRowsFromStorage failed due to %w", err)
@@ -135,12 +112,12 @@ func (s *MosService) GetRowsFromStorage(ctx context.Context) ([]types.Row, error
 		return nil, errors.New(errEmptyRes)
 	}
 
-	var rows []types.Row
-	if err := json.Unmarshal([]byte(res), &rows); err != nil {
+	var parkings []types.Parking
+	if err := json.Unmarshal([]byte(res), &parkings); err != nil {
 		return nil, fmt.Errorf("mosservice.GetRowsFromStorage.Unmarshal failed due to %w", err)
 	}
 
-	return rows, nil
+	return parkings, nil
 }
 
 func (s *MosService) GetParkingByGlobalId(ctx context.Context, id string) (types.Parking, error) {
@@ -156,7 +133,16 @@ func (s *MosService) GetByMode(ctx context.Context, mode string) (types.Parking,
 	return types.Parking{}, nil
 }
 
-func (s *MosService) saveRowsToCache(ctx context.Context) error {
+func (s *MosService) SaveRowsToCache(ctx context.Context) error {
 	err := s.rc.Redis.Set(ctx, allRows, s.rows, defaultTTL).Err()
 	return err
+}
+
+func (s *MosService) applyHeaders(headers map[string]string, r *http.Request) {
+	for key, value := range headers {
+		if len(key) == 0 {
+			return
+		}
+		r.Header.Add(key, value)
+	}
 }

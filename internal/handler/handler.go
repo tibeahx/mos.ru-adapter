@@ -38,7 +38,6 @@ func (h *Handler) Mux() *chi.Mux {
 			r.HandleFunc("/globalId", h.HandleParkingByGlobalId)
 			r.HandleFunc("/id", h.HandleParkingById)
 			r.HandleFunc("/mode", h.HandleParkingByMode)
-			r.HandleFunc("/all", h.HandleAllParkings)
 		})
 
 	})
@@ -78,19 +77,6 @@ func (h *Handler) HandleParkingByGlobalId(w http.ResponseWriter, r *http.Request
 	}
 
 	render.JSON(w, r, parking)
-	render.Status(r, http.StatusOK)
-}
-
-func (h *Handler) HandleAllParkings(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	rows, err := h.mos.GetRowsFromStorage(ctx)
-	if err != nil {
-		render.Status(r, http.StatusBadRequest)
-		return
-	}
-
-	render.JSON(w, r, rows)
 	render.Status(r, http.StatusOK)
 }
 func (h *Handler) HandleParkingById(w http.ResponseWriter, r *http.Request) {
