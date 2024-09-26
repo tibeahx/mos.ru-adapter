@@ -6,9 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"test-task/internal/config"
-	"test-task/internal/handler"
 	"time"
+
+	"github.com/tibeahx/mos.ru-adapter/internal/config"
+	"github.com/tibeahx/mos.ru-adapter/internal/handler"
 
 	"go.uber.org/zap"
 )

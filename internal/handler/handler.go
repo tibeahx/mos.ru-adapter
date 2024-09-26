@@ -3,8 +3,9 @@ package handler
 import (
 	"net/http"
 	"strconv"
-	"test-task/pkg/mid"
-	"test-task/pkg/service"
+
+	"github.com/tibeahx/mos.ru-adapter/pkg/mid"
+	"github.com/tibeahx/mos.ru-adapter/pkg/service"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"

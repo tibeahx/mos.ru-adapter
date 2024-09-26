@@ -4,13 +4,14 @@ import (
 	"context"
 	"log"
 	"sync"
-	"test-task/internal/config"
-	"test-task/internal/handler"
-	"test-task/internal/server"
-	storage "test-task/internal/store"
-	logger "test-task/pkg/log"
-	"test-task/pkg/service"
 	"time"
+
+	"github.com/tibeahx/mos.ru-adapter/internal/config"
+	"github.com/tibeahx/mos.ru-adapter/internal/handler"
+	"github.com/tibeahx/mos.ru-adapter/internal/server"
+	storage "github.com/tibeahx/mos.ru-adapter/internal/store"
+	logger "github.com/tibeahx/mos.ru-adapter/pkg/log"
+	"github.com/tibeahx/mos.ru-adapter/pkg/service"
 )
 
 var once sync.Once

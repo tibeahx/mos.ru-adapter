@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"test-task/internal/config"
+	"github.com/tibeahx/mos.ru-adapter/internal/config"
 
 	"github.com/redis/go-redis/v9"
 )

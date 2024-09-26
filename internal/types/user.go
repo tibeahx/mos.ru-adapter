@@ -1,6 +1,6 @@
 package types
 
-import "test-task/pkg/session"
+import "github.com/tibeahx/mos.ru-adapter/pkg/session"
 
 type User struct {
 	ID       string

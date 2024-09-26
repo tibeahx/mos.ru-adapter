@@ -1,4 +1,4 @@
-module test-task
+module github.com/tibeahx/mos.ru-adapter
 
 go 1.22.5
 

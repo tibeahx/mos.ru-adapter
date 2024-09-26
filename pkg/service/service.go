@@ -6,21 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
-	"test-task/internal/config"
-	storage "test-task/internal/store"
-	"test-task/internal/types"
 	"time"
+
+	"github.com/tibeahx/mos.ru-adapter/internal/config"
+	storage "github.com/tibeahx/mos.ru-adapter/internal/store"
+	"github.com/tibeahx/mos.ru-adapter/internal/types"
 
 	"go.uber.org/zap"
 )
 
 var (
-	defaultApiKey = os.Getenv("defaultApiKey")
-	defaultTTL    = 15 * time.Hour
-	client        = http.DefaultClient
-	errEmptyRes   = "got empty sting from redis"
+	defaultTTL  = 15 * time.Hour
+	client      = http.DefaultClient
+	errEmptyRes = "got empty sting from redis"
 )
 
 const (
