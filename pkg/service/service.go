@@ -59,12 +59,6 @@ func NewMosService(cfg *config.Config, rc *storage.RedisClient, logger *zap.Suga
 	}
 }
 
-var defaultHeaders = map[string]string{
-	"Accept":       "*/*",
-	"Connection":   "keep-alive",
-	"Content-type": "application/json",
-}
-
 func (s *MosService) GetAllParkingsFromUpstream() error {
 	ctx, cancel := context.WithTimeout(context.Background(), maxConnectionTimeout)
 	defer cancel()
@@ -81,9 +75,7 @@ func (s *MosService) GetAllParkingsFromUpstream() error {
 	}
 	s.Logger.Infof("done request: status:%d\n, resp:%s", status, string(resp))
 
-	if status != 200 {
-		return fmt.Errorf("status != 200\nactual:%d", status)
-	}
+	s.checkStatusFromUpstream(status, resp)
 
 	var parkings []types.Parking
 	if err := json.Unmarshal(resp, &parkings); err != nil {
@@ -158,7 +150,12 @@ func (s *MosService) makeRequest(ctx context.Context, method string, url string,
 		return nil, fmt.Errorf("mosservice.makeRequest.NewRequestWithContext failed due to :%w", err)
 	}
 
-	s.applyHeaders(defaultHeaders, req)
+	headers := make(map[string]string, 3)
+	headers["Accept"] = "*/*"
+	headers["Connection"] = "keep-alive"
+	headers["Content-type"] = "application/json"
+
+	s.applyHeaders(headers, req)
 
 	q := req.URL.Query()
 	q.Add("api_key", s.apiKey)
@@ -174,4 +171,20 @@ func (s *MosService) applyHeaders(headers map[string]string, r *http.Request) {
 		}
 		r.Header.Add(key, value)
 	}
+}
+
+func (s *MosService) checkStatusFromUpstream(status int, resp []byte) error {
+	switch status {
+	case http.StatusOK:
+		fallthrough
+	case http.StatusBadRequest:
+		return fmt.Errorf("bad request from mos.ru: %v", resp)
+	case http.StatusInternalServerError:
+		return fmt.Errorf("internal error from mos.ru: %v", resp)
+	case http.StatusNoContent:
+		fallthrough
+	case http.StatusServiceUnavailable:
+		return fmt.Errorf("service unavailable error from mos.ru: %v", resp)
+	}
+	return nil
 }
