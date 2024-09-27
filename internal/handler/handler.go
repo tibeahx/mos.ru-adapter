@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/tibeahx/mos.ru-adapter/pkg/mid"
-	"github.com/tibeahx/mos.ru-adapter/pkg/service"
+	"github.com/tibeahx/mos.ru-adapter/pkg/svc/mos"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
@@ -13,7 +13,7 @@ import (
 )
 
 type Handler struct {
-	mos         *service.MosService
+	mos         *mos.Mossvc
 	Router      *chi.Mux
 	middlewares []mid.Middleware
 }
@@ -46,7 +46,7 @@ func (h *Handler) Mux() *chi.Mux {
 	return r
 }
 
-func NewHandler(mos *service.MosService, middlewares ...mid.Middleware) *Handler {
+func NewHandler(mos *mos.Mossvc, middlewares ...mid.Middleware) *Handler {
 	h := &Handler{
 		mos: mos,
 	}
