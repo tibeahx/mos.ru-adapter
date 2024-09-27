@@ -3,7 +3,6 @@ package mos
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -18,8 +17,7 @@ import (
 )
 
 var (
-	defaultTTL  = 15 * time.Hour
-	errEmptyRes = "got empty sting from redis"
+	defaultTTL = 15 * time.Hour
 )
 
 const (
@@ -35,7 +33,12 @@ type Mossvc struct {
 	rc     *redis.RC
 }
 
-func NewMossvc(cfg *config.Config, rc *redis.RC, logger *zap.SugaredLogger, client *mosclient.MosClient) *Mossvc {
+func NewMossvc(
+	cfg *config.Config,
+	rc *redis.RC,
+	logger *zap.SugaredLogger,
+	client *mosclient.MosClient,
+) *Mossvc {
 	rows := make([]byte, 0)
 
 	return &Mossvc{
@@ -47,18 +50,18 @@ func NewMossvc(cfg *config.Config, rc *redis.RC, logger *zap.SugaredLogger, clie
 }
 
 func (s *Mossvc) GetParkingsFromStorage(ctx context.Context) ([]types.Parking, error) {
-	res, err := s.rc.Redis.Get(ctx, allRows).Result()
+	data, err := s.rc.Redis.Get(ctx, allRows).Result()
 	if err != nil {
-		return nil, fmt.Errorf("mossvc.GetRowsFromStorage failed due to %w", err)
+		return nil, fmt.Errorf("failed to get parkings from Redis: %w", err)
 	}
-
-	if res == "" {
-		return nil, errors.New(errEmptyRes)
+	s.logger.Infof("got %d bytes from store", len([]byte(data)))
+	if data == "" {
+		return nil, fmt.Errorf("got empty data from redis")
 	}
 
 	var parkings []types.Parking
-	if err := json.Unmarshal([]byte(res), &parkings); err != nil {
-		return nil, fmt.Errorf("mossvc.GetRowsFromStorage.Unmarshal failed due to %w", err)
+	if err := json.Unmarshal([]byte(data), &parkings); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal parkings from Redis: %w", err)
 	}
 
 	return parkings, nil
@@ -78,12 +81,18 @@ func (s *Mossvc) GetByMode(ctx context.Context, mode string) (types.Parking, err
 
 func (s *Mossvc) SaveRowsToCache(ctx context.Context) error {
 	s.mu.Lock()
-	err := s.rc.Redis.Set(ctx, allRows, s.rows, defaultTTL).Err()
+	if err := s.addRows(); err != nil {
+		return err
+	}
+
+	if err := s.rc.Redis.Set(ctx, allRows, s.rows, defaultTTL).Err(); err != nil {
+		return err
+	}
 	s.mu.Unlock()
-	return err
+	return nil
 }
 
-func (s *Mossvc) AddRows(parkings []types.Parking) error {
+func (s *Mossvc) addRows() error {
 	rows, err := s.client.GetAllParkingsFromUpstream()
 	if err != nil {
 		return err

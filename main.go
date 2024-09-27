@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
+	"sync"
 
 	"github.com/tibeahx/mos.ru-adapter/internal/config"
 	"github.com/tibeahx/mos.ru-adapter/internal/handler"
@@ -24,12 +27,26 @@ func main() {
 
 	ctx := context.Background()
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
+
 		if err := mos.SaveRowsToCache(ctx); err != nil {
 			log.Print("failed to save rows to redis")
 			return
 		}
+
+		parkings, err := mos.GetParkingsFromStorage(ctx)
+		if err != nil {
+			return
+		}
+
+		j, _ := json.Marshal(parkings)
+		fmt.Println(string(j))
 	}()
+	wg.Wait()
 
 	srv := server.NewServer(cfg, handler, logger)
 	if err := srv.Run(); err != nil {
