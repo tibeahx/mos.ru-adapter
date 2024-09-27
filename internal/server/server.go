@@ -24,7 +24,7 @@ func NewServer(
 	logger *zap.SugaredLogger,
 ) *Server {
 	httpServer := &http.Server{
-		Handler:           handler.Router,
+		Handler:           handler.Mux,
 		Addr:              cfg.SrvListenAddr,
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,

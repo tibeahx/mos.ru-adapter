@@ -14,7 +14,7 @@ import (
 
 type Handler struct {
 	mos         *mos.Mossvc
-	Router      *chi.Mux
+	Mux         *chi.Mux
 	middlewares []mid.Middleware
 }
 
@@ -23,11 +23,11 @@ func (h *Handler) applyMiddlewares() {
 		return
 	}
 	for _, mw := range h.middlewares {
-		h.Router.Use(mw)
+		h.Mux.Use(mw)
 	}
 }
 
-func (h *Handler) Mux() *chi.Mux {
+func (h *Handler) initMux() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
@@ -51,7 +51,7 @@ func NewHandler(mos *mos.Mossvc, middlewares ...mid.Middleware) *Handler {
 		mos: mos,
 	}
 
-	h.Router = h.Mux()
+	h.Mux = h.initMux()
 	h.middlewares = append(h.middlewares, middlewares...)
 	h.applyMiddlewares()
 
