@@ -2,10 +2,8 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/tibeahx/mos.ru-adapter/internal/config"
@@ -43,30 +41,17 @@ func NewServer(
 }
 
 func (s *Server) Run() error {
+	if s == nil {
+		return fmt.Errorf("server is nil")
+	}
+	if s.httpServer == nil {
+		return fmt.Errorf("http server is nil")
+	}
 	s.logger.Infof("listening on %s:", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	go func() {
-		<-sig
-
-		go func() {
-			<-ctx.Done()
-			if ctx.Err() == context.DeadlineExceeded {
-				s.logger.Panic("shotdown timed out, forcing quit...")
-			}
-		}()
-
-		if err := s.httpServer.Shutdown(ctx); err != nil {
-			s.logger.Fatal("failed to shutdown from ctx")
-		}
-	}()
-
-	<-ctx.Done()
-
-	return nil
+	s.logger.Infof("shutting down...")
+	return s.httpServer.Shutdown(ctx)
 }

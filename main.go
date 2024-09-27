@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/tibeahx/mos.ru-adapter/internal/config"
 	"github.com/tibeahx/mos.ru-adapter/internal/handler"
@@ -53,6 +56,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// хз хуйня какая то но вроде должно работать
-	// defer func() { srv.Stop(ctx) }()
+	defer func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		<-sig
+
+		if err := srv.Stop(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 }
