@@ -35,7 +35,7 @@ func GetConfig() *Config {
 		ApiKey: os.Getenv("APIKEY"),
 	}
 
-	if err := cleanenv.ReadConfig(cfgPath, &cfg); err != nil {
+	if err := cleanenv.ReadConfig(cfgPath, cfg); err != nil {
 		log.Fatal(err)
 	}
 
