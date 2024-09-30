@@ -25,7 +25,7 @@ const (
 	allRows           = "allRows"
 )
 
-type Mossvc struct {
+type Mos struct {
 	mu     sync.Mutex
 	client *mosclient.MosClient
 	logger *zap.SugaredLogger
@@ -33,15 +33,15 @@ type Mossvc struct {
 	rc     *redis.RC
 }
 
-func NewMossvc(
+func NewMos(
 	cfg *config.Config,
 	rc *redis.RC,
 	logger *zap.SugaredLogger,
 	client *mosclient.MosClient,
-) *Mossvc {
+) *Mos {
 	rows := make([]byte, 0)
 
-	return &Mossvc{
+	return &Mos{
 		client: client,
 		rc:     rc,
 		rows:   rows,
@@ -49,7 +49,7 @@ func NewMossvc(
 	}
 }
 
-func (s *Mossvc) GetParkingsFromStorage(ctx context.Context) ([]types.Parking, error) {
+func (s *Mos) GetParkingsFromStorage(ctx context.Context) ([]types.Parking, error) {
 	data, err := s.rc.Redis.Get(ctx, allRows).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get parkings from Redis: %w", err)
@@ -67,19 +67,19 @@ func (s *Mossvc) GetParkingsFromStorage(ctx context.Context) ([]types.Parking, e
 	return parkings, nil
 }
 
-func (s *Mossvc) GetParkingByGlobalId(ctx context.Context, id string) (types.Parking, error) {
+func (s *Mos) GetParkingByGlobalId(ctx context.Context, id string) (types.Parking, error) {
 	return types.Parking{}, nil
 }
 
-func (s *Mossvc) GetParkingById(ctx context.Context, id string) (types.Parking, error) {
+func (s *Mos) GetParkingById(ctx context.Context, id string) (types.Parking, error) {
 	return types.Parking{}, nil
 }
 
-func (s *Mossvc) GetByMode(ctx context.Context, mode string) (types.Parking, error) {
+func (s *Mos) GetByMode(ctx context.Context, mode string) (types.Parking, error) {
 	return types.Parking{}, nil
 }
 
-func (s *Mossvc) SaveRowsToCache(ctx context.Context) error {
+func (s *Mos) SaveRowsToCache(ctx context.Context) error {
 	s.mu.Lock()
 	if err := s.addRows(); err != nil {
 		return err
@@ -92,7 +92,7 @@ func (s *Mossvc) SaveRowsToCache(ctx context.Context) error {
 	return nil
 }
 
-func (s *Mossvc) addRows() error {
+func (s *Mos) addRows() error {
 	rows, err := s.client.GetAllParkingsFromUpstream()
 	if err != nil {
 		return err

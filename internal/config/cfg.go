@@ -14,7 +14,7 @@ type Config struct {
 	RedisPassword   string `yaml:"redisPassword"`
 	RedisClientAddr string `yaml:"redisClientAddr"`
 	SrvListenAddr   string `yaml:"srvListenaddr"`
-	MossvcUrl       string `yaml:"mossvcUrl"`
+	MosUrl          string `yaml:"MosUrl"`
 }
 
 func GetConfig() *Config {

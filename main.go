@@ -25,7 +25,7 @@ func main() {
 	logger := logger.Zap()
 	rc := redis.NewRC(cfg)
 	mosClient := mosclient.NewMosClient(cfg, logger)
-	mos := mos.NewMossvc(cfg, rc, logger, mosClient)
+	mos := mos.NewMos(cfg, rc, logger, mosClient)
 	handler := handler.NewHandler(mos)
 
 	ctx := context.Background()

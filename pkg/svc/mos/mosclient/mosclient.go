@@ -29,7 +29,7 @@ type MosClient struct {
 
 func NewMosClient(cfg *config.Config, logger *zap.SugaredLogger) *MosClient {
 	var u *url.URL
-	u, err := url.Parse(cfg.MossvcUrl)
+	u, err := url.Parse(cfg.MosUrl)
 	if err != nil {
 		panic(err)
 	}

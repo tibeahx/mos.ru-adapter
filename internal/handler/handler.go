@@ -1,9 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
 
+	"github.com/tibeahx/mos.ru-adapter/pkg/helper"
 	"github.com/tibeahx/mos.ru-adapter/pkg/mid"
 	"github.com/tibeahx/mos.ru-adapter/pkg/svc/mos"
 
@@ -12,8 +13,17 @@ import (
 	"github.com/go-chi/render"
 )
 
+const (
+	globalId  = "globalId"
+	id        = "id"
+	parkingId = "parkingId"
+	mode      = "mode"
+	jsonErr   = "error"
+	result    = "result"
+)
+
 type Handler struct {
-	mos         *mos.Mossvc
+	mos         *mos.Mos
 	Mux         *chi.Mux
 	middlewares []mid.Middleware
 }
@@ -46,7 +56,7 @@ func (h *Handler) initMux() *chi.Mux {
 	return r
 }
 
-func NewHandler(mos *mos.Mossvc, middlewares ...mid.Middleware) *Handler {
+func NewHandler(mos *mos.Mos, middlewares ...mid.Middleware) *Handler {
 	h := &Handler{
 		mos: mos,
 	}
@@ -64,10 +74,11 @@ func (h *Handler) HandleAuth(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleParkingByGlobalId(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "globalId")
 
-	if !validateId(id) {
+	if !helper.VadlidateID(id) {
 		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{jsonErr: fmt.Sprintf("%s: %s not found", globalId, id)})
 		return
 	}
 
@@ -85,11 +96,3 @@ func (h *Handler) HandleParkingById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleParkingByMode(w http.ResponseWriter, r *http.Request) {}
-
-func validateId(id string) bool {
-	intId, err := strconv.Atoi(id)
-	if err != nil || id == "" {
-		return false
-	}
-	return intId > 0
-}
