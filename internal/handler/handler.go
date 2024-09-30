@@ -1,19 +1,30 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
-	"test-task/pkg/mid"
-	"test-task/pkg/service"
+
+	"github.com/tibeahx/mos.ru-adapter/pkg/helper"
+	"github.com/tibeahx/mos.ru-adapter/pkg/mid"
+	"github.com/tibeahx/mos.ru-adapter/pkg/svc/mos"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )
 
+const (
+	globalId  = "globalId"
+	id        = "id"
+	parkingId = "parkingId"
+	mode      = "mode"
+	jsonErr   = "error"
+	result    = "result"
+)
+
 type Handler struct {
-	mos         *service.MosService
-	Router      *chi.Mux
+	mos         *mos.Mos
+	Mux         *chi.Mux
 	middlewares []mid.Middleware
 }
 
@@ -22,11 +33,11 @@ func (h *Handler) applyMiddlewares() {
 		return
 	}
 	for _, mw := range h.middlewares {
-		h.Router.Use(mw)
+		h.Mux.Use(mw)
 	}
 }
 
-func (h *Handler) Mux() *chi.Mux {
+func (h *Handler) initMux() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
@@ -45,12 +56,12 @@ func (h *Handler) Mux() *chi.Mux {
 	return r
 }
 
-func NewHandler(mos *service.MosService, middlewares ...mid.Middleware) *Handler {
+func NewHandler(mos *mos.Mos, middlewares ...mid.Middleware) *Handler {
 	h := &Handler{
 		mos: mos,
 	}
 
-	h.Router = h.Mux()
+	h.Mux = h.initMux()
 	h.middlewares = append(h.middlewares, middlewares...)
 	h.applyMiddlewares()
 
@@ -63,10 +74,11 @@ func (h *Handler) HandleAuth(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleParkingByGlobalId(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "globalId")
 
-	if !validateId(id) {
+	if !helper.VadlidateID(id) {
 		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{jsonErr: fmt.Sprintf("%s: %s not found", globalId, id)})
 		return
 	}
 
@@ -84,11 +96,3 @@ func (h *Handler) HandleParkingById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleParkingByMode(w http.ResponseWriter, r *http.Request) {}
-
-func validateId(id string) bool {
-	intId, err := strconv.Atoi(id)
-	if err != nil || id == "" {
-		return false
-	}
-	return intId > 0
-}

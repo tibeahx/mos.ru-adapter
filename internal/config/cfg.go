@@ -14,7 +14,7 @@ type Config struct {
 	RedisPassword   string `yaml:"redisPassword"`
 	RedisClientAddr string `yaml:"redisClientAddr"`
 	SrvListenAddr   string `yaml:"srvListenaddr"`
-	MosServiceUrl   string `yaml:"mosServiceUrl"`
+	MosUrl          string `yaml:"MosUrl"`
 }
 
 func GetConfig() *Config {
@@ -35,7 +35,7 @@ func GetConfig() *Config {
 		ApiKey: os.Getenv("APIKEY"),
 	}
 
-	if err := cleanenv.ReadConfig(cfgPath, &cfg); err != nil {
+	if err := cleanenv.ReadConfig(cfgPath, cfg); err != nil {
 		log.Fatal(err)
 	}
 

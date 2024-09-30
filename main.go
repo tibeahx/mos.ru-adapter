@@ -2,49 +2,67 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"sync"
-	"test-task/internal/config"
-	"test-task/internal/handler"
-	"test-task/internal/server"
-	storage "test-task/internal/store"
-	logger "test-task/pkg/log"
-	"test-task/pkg/service"
-	"time"
-)
+	"syscall"
 
-var once sync.Once
+	"github.com/tibeahx/mos.ru-adapter/internal/config"
+	"github.com/tibeahx/mos.ru-adapter/internal/handler"
+	"github.com/tibeahx/mos.ru-adapter/internal/server"
+
+	logger "github.com/tibeahx/mos.ru-adapter/pkg/log"
+	"github.com/tibeahx/mos.ru-adapter/pkg/svc/mos"
+	"github.com/tibeahx/mos.ru-adapter/pkg/svc/mos/mosclient"
+	"github.com/tibeahx/mos.ru-adapter/pkg/svc/redis"
+)
 
 func main() {
 	cfg := config.GetConfig()
-
 	logger := logger.Zap()
-
-	redis := storage.NewRedisClient(cfg)
-	mos := service.NewMosService(cfg, redis, logger)
-
+	rc := redis.NewRC(cfg)
+	mosClient := mosclient.NewMosClient(cfg, logger)
+	mos := mos.NewMos(cfg, rc, logger, mosClient)
 	handler := handler.NewHandler(mos)
 
-	// если не успели за 5 сек достать из апстрима простыню, идем наху
-	// todo: если пошшли назуй, долбимся пока не отдаст
-	ctx, err := context.WithTimeout(context.Background(), time.Second*5)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// вынес в мейн при старте сервака теперь лезем в апстрим и сохраняем ответ в редис по ключу allParkings
-	once.Do(func() { getAndSaveParkingsToRedis(mos, ctx) })
+	ctx := context.Background()
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		if err := mos.SaveRowsToCache(ctx); err != nil {
+			log.Print("failed to save rows to redis")
+			return
+		}
+
+		parkings, err := mos.GetParkingsFromStorage(ctx)
+		if err != nil {
+			return
+		}
+
+		j, _ := json.Marshal(parkings)
+		fmt.Println(string(j))
+	}()
+	wg.Wait()
 
 	srv := server.NewServer(cfg, handler, logger)
-
 	if err := srv.Run(); err != nil {
 		log.Fatal(err)
 	}
 
-	// хз хуйня какая то но вроде должно работать
-	defer func() { srv.Stop(ctx) }()
-}
+	defer func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		<-sig
 
-func getAndSaveParkingsToRedis(mos *service.MosService, ctx context.Context) {
-	mos.GetAllParkingsFromUpstream()
-	mos.SaveRowsToCache(ctx)
+		if err := srv.Stop(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 }
